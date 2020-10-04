@@ -129,7 +129,7 @@ class AddBones(bpy.types.Operator):
     
 class CopyConstraints(bpy.types.Operator):
     bl_idname = "bone.copy_constraints"
-    bl_label = "Copy All Constraints"
+    bl_label = "Copy All"
     bl_options = {'REGISTER', 'UNDO'}
     
     @classmethod
@@ -141,13 +141,32 @@ class CopyConstraints(bpy.types.Operator):
     
     def execute(self, context):
         
-        myTool = context.scene.bone_tool
         activeBoneConstraints = context.active_pose_bone.constraints
         
         for bone in bpy.context.selected_pose_bones:
             if bone != context.active_pose_bone:
                 for constraint in context.active_pose_bone.constraints:
                     bone.constraints.copy(constraint)
+                
+        return {'FINISHED'}
+    
+class DeleteConstraints(bpy.types.Operator):
+    bl_idname = "bone.delete_constraints"
+    bl_label = "Delete All"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE' and len(context.selected_pose_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        for bone in bpy.context.selected_pose_bones:
+            for constraint in bone.constraints:
+                bone.constraints.remove(constraint)
                 
         return {'FINISHED'}
     
@@ -206,6 +225,7 @@ class OperatorPanel(bpy.types.Panel):
         if activeObj.type == 'ARMATURE' and activeObj.mode == 'POSE':
             row.label(text = "Copy Bone Constraints", icon = 'CUBE')
             row = layout.row()
+            row.operator("bone.delete_constraints")
             row.operator("bone.copy_constraints")
         
         
@@ -213,7 +233,7 @@ class OperatorPanel(bpy.types.Panel):
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
