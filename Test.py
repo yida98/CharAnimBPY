@@ -24,7 +24,7 @@ class BoneSettings(bpy.types.PropertyGroup):
         default = False
         )
         
-#class GeneralSettings(bpy.types.PropertyGroup):
+class GeneralSettings(bpy.types.PropertyGroup):
     newName: bpy.props.StringProperty(
         name = "Name",
         description = "Rename some items to a new name"
@@ -40,7 +40,7 @@ class RenameItems(bpy.types.Operator):
     
     def execute(self, context):
         
-        myTool = bpy.context.scene.bone_tool
+        myTool = bpy.context.scene.general_tool
         rename = myTool.newName
         
         activeObj = context.active_object
@@ -128,12 +128,13 @@ class GeneralPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         
-        myTool = context.scene.bone_tool
+        myTool = context.scene.general_tool
         
         row = layout.row()
         row.prop(myTool, "newName")
         row = layout.row()
         row.operator("bone.rename_all")
+        
         
         
 class OperatorPanel(bpy.types.Panel):
@@ -146,7 +147,6 @@ class OperatorPanel(bpy.types.Panel):
         layout = self.layout
         
         myTool = context.scene.bone_tool
-        
         row = layout.row()
         if context.active_object.mode == 'EDIT':
 #            row.label(text = "Add Bones", icon = 'CUBE')
@@ -159,18 +159,22 @@ class OperatorPanel(bpy.types.Panel):
             row = layout.row()
             row.operator("bone.add_bone")
         
+        
+        
             
-classes = (BoneSettings, RenameItems, AddBones, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
         bpy.utils.register_class(c)
     bpy.types.Scene.bone_tool = bpy.props.PointerProperty(type = BoneSettings)
+    bpy.types.Scene.general_tool = bpy.props.PointerProperty(type = GeneralSettings)
 
 def unregister():
     for c in classes:
         bpy.utils.unregister_class(c)
     del bpy.types.Scene.bone_tool
+    del bpy.types.Scene.general_tool
 
 if __name__ == "__main__":
     register()
