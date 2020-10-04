@@ -176,8 +176,46 @@ class DeleteConstraints(bpy.types.Operator):
                 bone.constraints.remove(constraint)
                 
         return {'FINISHED'}
+        
+class DeformOn(bpy.types.Operator):
+    bl_idname = "bone.deform_on"
+    bl_label = "On"
+    bl_options = {'REGISTER', 'UNDO'}
     
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'EDIT' and len(context.selected_bones) > 0:
+            return True
+        return False
     
+    def execute(self, context):
+        
+        for bone in bpy.context.selected_bones:
+            bone.use_deform = True
+                
+        return {'FINISHED'}
+    
+class DeformOff(bpy.types.Operator):
+    bl_idname = "bone.deform_off"
+    bl_label = "Off"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'EDIT' and len(context.selected_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        for bone in bpy.context.selected_bones:
+            bone.use_deform = False
+                
+        return {'FINISHED'}
+
+
 # ------------------------
 # PANELS
 # ------------------------
@@ -229,18 +267,29 @@ class OperatorPanel(bpy.types.Panel):
             
         row = layout.row()
         
-        if activeObj.type == 'ARMATURE' and activeObj.mode == 'POSE':
-            row.label(text = "Bone Constraints", icon = 'CONSTRAINT_BONE')
-            row = layout.row()
-            row.operator("bone.delete_constraints")
-            row.operator("bone.copy_constraints")
+        if activeObj.type == 'ARMATURE':
+            if activeObj.mode == 'POSE':
+                row.label(text = "Bone Constraints", icon = 'CONSTRAINT_BONE')
+                row = layout.row()
+                row.operator("bone.delete_constraints")
+                row.operator("bone.copy_constraints")
+                
+            elif activeObj.mode == 'EDIT':
+                row = layout.row()
+                split = layout.split(factor = 0.5)
+                col1 = split.column()
+                col1.label(text = "Deform", icon = "BONE_DATA")
+                col2 = split.column()
+                col3 = split.column()
+                col2.operator("bone.deform_on")
+                col3.operator("bone.deform_off")
         
         
 # ------------------------
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
