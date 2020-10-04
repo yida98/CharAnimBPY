@@ -127,6 +127,30 @@ class AddBones(bpy.types.Operator):
         self.createBonesAt(context, selected)
         return {'FINISHED'}
     
+class CopyConstraints(bpy.types.Operator):
+    bl_idname = "bone.copy_constraints"
+    bl_label = "Copy All Constraints"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE' and len(context.selected_pose_bones) > 1:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        myTool = context.scene.bone_tool
+        activeBoneConstraints = context.active_pose_bone.constraints
+        
+        for bone in bpy.context.selected_pose_bones:
+            if bone != context.active_pose_bone:
+                for constraint in context.active_pose_bone.constraints:
+                    bone.constraints.copy(constraint)
+                
+        return {'FINISHED'}
+    
     
 # ------------------------
 # PANELS
@@ -144,6 +168,8 @@ class GeneralPanel(bpy.types.Panel):
         myTool = context.scene.general_tool
         
         row = layout.row()
+        row.label(text = "Batch Rename", icon = 'CUBE')
+        row = layout.row()
         row.prop(myTool, "newName")
         row = layout.row()
         row.operator("bone.rename_all")
@@ -160,10 +186,13 @@ class OperatorPanel(bpy.types.Panel):
         layout = self.layout
         
         myTool = context.scene.bone_tool
+        activeObj = context.active_object
+        
         row = layout.row()
-        if context.active_object.mode == 'EDIT':
-#            row.label(text = "Add Bones", icon = 'CUBE')
-#            row = layout.row()
+        
+        if activeObj.mode == 'EDIT':
+            row.label(text = "Add Bones", icon = 'CUBE')
+            row = layout.row()
             row.prop(myTool, "bbone")
             row = layout.row()
             row.prop(myTool, "switchDir")
@@ -171,14 +200,20 @@ class OperatorPanel(bpy.types.Panel):
             row.prop(myTool, "bboneSeg")
             row = layout.row()
             row.operator("bone.add_bone")
+            
+        row = layout.row()
         
+        if activeObj.type == 'ARMATURE' and activeObj.mode == 'POSE':
+            row.label(text = "Copy Bone Constraints", icon = 'CUBE')
+            row = layout.row()
+            row.operator("bone.copy_constraints")
         
         
 # ------------------------
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
