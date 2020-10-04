@@ -1,8 +1,10 @@
 import bpy
 
+
 # ------------------------
 # PROPERTY GROUPS
 # ------------------------
+
 class BoneSettings(bpy.types.PropertyGroup):
     bbone: bpy.props.BoolProperty(
         name = "Bendy Bone",
@@ -30,9 +32,11 @@ class GeneralSettings(bpy.types.PropertyGroup):
         description = "Rename some items to a new name"
         )
         
+        
 # ------------------------
 # OPERATORS
 # ------------------------
+
 class RenameItems(bpy.types.Operator):
     bl_idname = "bone.rename_all"
     bl_label = "Rename All"
@@ -40,6 +44,7 @@ class RenameItems(bpy.types.Operator):
     
     def execute(self, context):
         
+        context.view_layer.update()
         myTool = bpy.context.scene.general_tool
         rename = myTool.newName
         
@@ -48,9 +53,12 @@ class RenameItems(bpy.types.Operator):
         if activeObj.mode == 'OBJECT':
             for item in context.selected_objects:
                 item.name = rename
-        else:
-            if activeObj.type == 'ARMATURE':
+        elif activeObj.type == 'ARMATURE':
+            if activeObj.mode == 'EDIT':
                 for bone in context.selected_bones:
+                    bone.name = rename
+            elif activeObj.mode == 'POSE':
+                for bone in context.selected_pose_bones:
                     bone.name = rename
             
         return {'FINISHED'}
@@ -119,6 +127,11 @@ class AddBones(bpy.types.Operator):
         self.createBonesAt(context, selected)
         return {'FINISHED'}
     
+    
+# ------------------------
+# PANELS
+# ------------------------
+    
 class GeneralPanel(bpy.types.Panel):
     bl_label = "General"
     bl_space_type = 'VIEW_3D'
@@ -161,6 +174,9 @@ class OperatorPanel(bpy.types.Panel):
         
         
         
+# ------------------------
+# REGISTER
+# ------------------------
             
 classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, GeneralPanel, OperatorPanel)
 
