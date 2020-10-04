@@ -19,6 +19,14 @@ class BoneSettings(bpy.types.PropertyGroup):
         soft_min = 0,
         soft_max = 36
         )
+        
+    bboneSeg1: bpy.props.IntProperty(
+    name = "Segments",
+    description = "Bendy Segments",
+    default = 4,
+    soft_min = 0,
+    soft_max = 36
+        )
     
     switchDir: bpy.props.BoolProperty(
         name = "Switch Direction",
@@ -214,6 +222,27 @@ class DeformOff(bpy.types.Operator):
             bone.use_deform = False
                 
         return {'FINISHED'}
+    
+class BatchSeg(bpy.types.Operator):
+    bl_idname = "bone.add_bend"
+    bl_label = "Apply"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'EDIT' and len(context.selected_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        myTool = context.scene.bone_tool
+        
+        for bone in bpy.context.selected_bones:
+            bone.bbone_segments = myTool.bboneSeg1
+        
+        return {'FINISHED'}
 
 
 # ------------------------
@@ -283,13 +312,23 @@ class OperatorPanel(bpy.types.Panel):
                 col3 = split.column()
                 col2.operator("bone.deform_on")
                 col3.operator("bone.deform_off")
+                
+                row = layout.row()
+                row = layout.row()
+                row.label(text = "Batch Bone Segmentation", icon = 'BONE_DATA')
+                
+                split = layout.split(factor = 0.7)
+                col1 = split.column()
+                col2 = split.column()
+                col1.prop(myTool, "bboneSeg1")
+                col2.operator("bone.add_bend")
         
         
 # ------------------------
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
