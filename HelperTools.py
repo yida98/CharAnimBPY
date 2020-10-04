@@ -113,15 +113,16 @@ class AddBones(bpy.types.Operator):
                 
     @classmethod
     def poll(cls, context):
-        activeObj = context.active_object
-        objs = context.selected_objects
-        if activeObj.type == 'MESH' and len(objs) == 2:
-            for obj in objs:
-                if obj != activeObj and obj.type == 'ARMATURE':
-                    activeObj.update_from_editmode()
-                    for v in activeObj.data.vertices:
-                        if v.select:
-                            return True
+        if len(bpy.data.objects) > 0:
+            activeObj = context.active_object
+            objs = context.selected_objects
+            if activeObj.type == 'MESH' and len(objs) == 2:
+                for obj in objs:
+                    if obj != activeObj and obj.type == 'ARMATURE':
+                        activeObj.update_from_editmode()
+                        for v in activeObj.data.vertices:
+                            if v.select:
+                                return True
         return False
     
     def execute(self, context):
