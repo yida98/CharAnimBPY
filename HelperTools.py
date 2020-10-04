@@ -69,7 +69,10 @@ class AddBones(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def createBonesAt(self, context, vec):
-        armature = bpy.data.objects['Armature.001']
+        armature = bpy.data.objects[0]
+        for obj in context.selected_objects:
+            if obj.type == 'ARMATURE':
+                armature = obj
         
         # Go to object mode
         if context.active_object.mode != 'OBJECT':
@@ -110,12 +113,15 @@ class AddBones(bpy.types.Operator):
                 
     @classmethod
     def poll(cls, context):
-        obj = context.object
-        if obj.type == 'MESH':
-            obj.update_from_editmode()
-            for v in obj.data.vertices:
-                if v.select:
-                    return True
+        activeObj = context.active_object
+        objs = context.selected_objects
+        if activeObj.type == 'MESH' and len(objs) == 2:
+            for obj in objs:
+                if obj != activeObj and obj.type == 'ARMATURE':
+                    activeObj.update_from_editmode()
+                    for v in activeObj.data.vertices:
+                        if v.select:
+                            return True
         return False
     
     def execute(self, context):
@@ -187,7 +193,7 @@ class GeneralPanel(bpy.types.Panel):
         myTool = context.scene.general_tool
         
         row = layout.row()
-        row.label(text = "Batch Rename", icon = 'CUBE')
+        row.label(text = "Batch Rename", icon = 'SORTALPHA')
         row = layout.row()
         row.prop(myTool, "newName")
         row = layout.row()
@@ -210,7 +216,7 @@ class OperatorPanel(bpy.types.Panel):
         row = layout.row()
         
         if activeObj.mode == 'EDIT':
-            row.label(text = "Add Bones", icon = 'CUBE')
+            row.label(text = "Add Bones", icon = 'GROUP_BONE')
             row = layout.row()
             row.prop(myTool, "bbone")
             row = layout.row()
@@ -223,7 +229,7 @@ class OperatorPanel(bpy.types.Panel):
         row = layout.row()
         
         if activeObj.type == 'ARMATURE' and activeObj.mode == 'POSE':
-            row.label(text = "Copy Bone Constraints", icon = 'CUBE')
+            row.label(text = "Bone Constraints", icon = 'CONSTRAINT_BONE')
             row = layout.row()
             row.operator("bone.delete_constraints")
             row.operator("bone.copy_constraints")
