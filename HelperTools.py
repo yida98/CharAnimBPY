@@ -20,6 +20,12 @@ class BoneSettings(bpy.types.PropertyGroup):
         soft_max = 36
         )
         
+    boneScale: bpy.props.FloatProperty(
+        name = "Display Size",
+        default = 0.02,
+        soft_min = 0.0,
+    )
+        
     bboneSeg1: bpy.props.IntProperty(
     name = "Segments",
     description = "Bendy Segments",
@@ -115,7 +121,8 @@ class AddBones(bpy.types.Operator):
                 bpy.ops.armature.switch_direction()
             
             # Scale down
-            scale = 0.02
+            
+            scale = myTool.boneScale
             currBone.bbone_x = scale
             currBone.bbone_z = scale
                 
@@ -291,6 +298,8 @@ class OperatorPanel(bpy.types.Panel):
             row.prop(myTool, "switchDir")
             row = layout.row()
             row.prop(myTool, "bboneSeg")
+            row = layout.row()
+            row.prop(myTool, "boneScale")
             row = layout.row()
             row.operator("bone.add_bone")
             
