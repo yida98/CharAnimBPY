@@ -1,4 +1,5 @@
 import bpy
+from Mathutils import Vector
 
 
 # ------------------------
@@ -27,17 +28,22 @@ class BoneSettings(bpy.types.PropertyGroup):
     )
         
     bboneSeg1: bpy.props.IntProperty(
-    name = "Segments",
-    description = "Bendy Segments",
-    default = 4,
-    soft_min = 0,
-    soft_max = 36
+        name = "Segments",
+        description = "Bendy Segments",
+        default = 4,
+        soft_min = 0,
+        soft_max = 36
         )
     
     switchDir: bpy.props.BoolProperty(
         name = "Switch Direction",
         description = "Switch the tail and head location of the bone",
         default = False
+        )
+    
+    customDisplay: bpy.props.PointerProperty(
+        type = bpy.types.Object,
+        name = "Display"
         )
         
 class GeneralSettings(bpy.types.PropertyGroup):
@@ -50,6 +56,22 @@ class GeneralSettings(bpy.types.PropertyGroup):
 # ------------------------
 # OPERATORS
 # ------------------------
+
+def createBoneAt(location, armature, name = "", length = 0.5, roll = 0, normal = Vector([0, 0, 1])):
+    
+    currBone = armature.data.edit_bones.new(name = name)
+    currBone.head = location
+    currBone.tail = location + (length * normal)
+    currBone.roll = roll
+    
+    return currBone
+
+def deselectBone(bone):
+    bone.select_head = False
+    bone.select_tail = False
+    bone.select = False
+    return bone
+
 
 class RenameItems(bpy.types.Operator):
     bl_idname = "bone.rename_all"
@@ -103,13 +125,8 @@ class AddBones(bpy.types.Operator):
         
         # Iterate through the given vectors and create a BBone at each Vertices
         for v in vec:
-            context.scene.cursor.location = v
             
-            # Add bbone
-            bpy.ops.armature.bone_primitive_add()
-            
-            bpy.ops.armature.select_linked()
-            currBone = context.selected_bones[0]
+            currBone = createBoneAt(v, armature)
             myTool = bpy.context.scene.bone_tool
             
             if myTool.bbone:
@@ -250,7 +267,69 @@ class BatchSeg(bpy.types.Operator):
             bone.bbone_segments = myTool.bboneSeg1
         
         return {'FINISHED'}
+    
+class ControlBones(bpy.types.Operator):
+    bl_idname = "bone.control_bones"
+    bl_label = "Apply"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'EDIT' and len(context.selected_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        obj = context.object
+        myTool = context.scene.bone_tool
+        selectedBones = bpy.context.selected_bones
+        
+        for bone in selectedBones:
+            head = bone.head - Vector([0, 0, 0.1])
+            tail = bone.tail - Vector([0, 0, 0.1])
+            
+            normal = (tail - head).normalize()
+            
+            bone.bbone_handle_type_start = 'ABSOLUTE'
+            bone.bbone_handle_type_end = 'ABSOLUTE'
+            
+            bone.parent = None
+            deselectBone(bone)
+            
+            # Add bones head and tail 
+            
+            ctrlLocs = [head, tail]
+            basename = "BB_" + bone.name
+            if len(bone.basename.split("_", 1)) > 1:
+                basename = "BB_" + bone.name.split("_", 1)[1]
+            
+            
+            for i in range(len(ctrlLocs)):
+                
+                currBone = createBoneAt(ctrlLocs[i], obj, basename, 0.1, 0, normal)
+                currBone.use_deform = False
+                
+                if i == 0:
+                    bone.parent = currBone
+                    bone.use_connect = True
 
+                    bone.bbone_custom_handle_start = currBone
+                else:
+                    bpy.ops.object.mode_set(mode = 'POSE')
+                    poseBone = context.object.pose.bones[basename]
+                    poseBone.constraints.new(type="STRETCH_TO").target = obj
+                    poseBone.constraints["Stretch To"].subtarget = basename
+                    
+                    bone.bbone_custom_handle_end = currBone
+                    
+                    bpy.ops.object.mode_set(mode = 'EDIT')
+                
+                if myTool.customDisplay:
+                    context.object.pose.bones[basename].custom_shape = myTool.customDisplay
+        
+        return {'FINISHED'}
 
 # ------------------------
 # PANELS
@@ -313,10 +392,19 @@ class OperatorPanel(bpy.types.Panel):
                 row.operator("bone.copy_constraints")
                 
             elif activeObj.mode == 'EDIT':
+                
+                row = layout.row()
+                row.label(text = "Add Control Bones", icon = 'BONE_DATA')
+                row = layout.row()
+                row.prop(myTool, "customDisplay")
+                row = layout.row()
+                
+                row.operator("bone.control_bones")
+                
                 row = layout.row()
                 split = layout.split(factor = 0.5)
                 col1 = split.column()
-                col1.label(text = "Deform", icon = "BONE_DATA")
+                col1.label(text = "Deform", icon = 'BONE_DATA')
                 col2 = split.column()
                 col3 = split.column()
                 col2.operator("bone.deform_on")
@@ -331,13 +419,14 @@ class OperatorPanel(bpy.types.Panel):
                 col2 = split.column()
                 col1.prop(myTool, "bboneSeg1")
                 col2.operator("bone.add_bend")
+            
         
         
 # ------------------------
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, ControlBones, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
