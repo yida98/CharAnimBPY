@@ -1,5 +1,5 @@
 import bpy
-from Mathutils import Vector
+from mathutils import Vector
 
 
 # ------------------------
@@ -57,7 +57,7 @@ class GeneralSettings(bpy.types.PropertyGroup):
 # OPERATORS
 # ------------------------
 
-def createBoneAt(location, armature, name = "", length = 0.5, roll = 0, normal = Vector([0, 0, 1])):
+def createBoneAt(location, armature, name = "Bone", length = 0.5, roll = 0, normal = Vector((0,0,1))):
     
     currBone = armature.data.edit_bones.new(name = name)
     currBone.head = location
@@ -281,53 +281,65 @@ class ControlBones(bpy.types.Operator):
         return False
     
     def execute(self, context):
-        
+        bpy.context.view_layer.update()
         obj = context.object
+        armature = bpy.data.armatures[obj.name]
         myTool = context.scene.bone_tool
-        selectedBones = bpy.context.selected_bones
+        selectedBones = list(map(lambda a: a.name , list(bpy.context.selected_bones)))
         
-        for bone in selectedBones:
-            head = bone.head - Vector([0, 0, 0.1])
-            tail = bone.tail - Vector([0, 0, 0.1])
+        self.report({'INFO'}, "STARTLoB: %s" % (list(selectedBones)))
+        for boneName in selectedBones:
+            bpy.context.view_layer.update()
             
-            normal = (tail - head).normalize()
+            self.report({'INFO'}, "1LoB: %s" % (boneName))
+            bone = armature.edit_bones[boneName]
+            normal = (bone.tail - bone.head).normalized()
             
-            bone.bbone_handle_type_start = 'ABSOLUTE'
-            bone.bbone_handle_type_end = 'ABSOLUTE'
-            
+            head = bone.head - (0.1 * normal)
+            tail = bone.tail
             bone.parent = None
-            deselectBone(bone)
+            self.report({'INFO'}, "head: %s, tail: %s, normal: %s" % (head, tail, normal))
+            
+#            bone.bbone_handle_type_start = 'ABSOLUTE'
+#            bone.bbone_handle_type_end = 'ABSOLUTE'
+            
+#            deselectBone(bone)
             
             # Add bones head and tail 
             
             ctrlLocs = [head, tail]
-            basename = "BB_" + bone.name
-            if len(bone.basename.split("_", 1)) > 1:
-                basename = "BB_" + bone.name.split("_", 1)[1]
-            
+            basename = "HNDL_" + boneName
+            if "_" in boneName:
+                basename = "HNDL_" + boneName.split("_", 1)[1]
             
             for i in range(len(ctrlLocs)):
-                
                 currBone = createBoneAt(ctrlLocs[i], obj, basename, 0.1, 0, normal)
+                self.report({'INFO'}, "loc: %s, name: %s" % (ctrlLocs[i], currBone.name))
+                currBoneName = currBone.name
                 currBone.use_deform = False
                 
                 if i == 0:
+                    bone = armature.edit_bones[boneName]
                     bone.parent = currBone
                     bone.use_connect = True
 
-                    bone.bbone_custom_handle_start = currBone
+#                    bone.bbone_custom_handle_start = currBone
                 else:
                     bpy.ops.object.mode_set(mode = 'POSE')
-                    poseBone = context.object.pose.bones[basename]
+                    poseBone = context.object.pose.bones[boneName]
                     poseBone.constraints.new(type="STRETCH_TO").target = obj
-                    poseBone.constraints["Stretch To"].subtarget = basename
+                    poseBone.constraints["Stretch To"].subtarget = currBoneName
                     
-                    bone.bbone_custom_handle_end = currBone
+#                    bone.bbone_custom_handle_end = currBone
                     
                     bpy.ops.object.mode_set(mode = 'EDIT')
                 
                 if myTool.customDisplay:
-                    context.object.pose.bones[basename].custom_shape = myTool.customDisplay
+                    bpy.ops.object.mode_set(mode = 'POSE')
+                    poseBone = context.object.pose.bones[currBoneName]
+                    poseBone.custom_shape = myTool.customDisplay
+                    bpy.ops.object.mode_set(mode = 'EDIT')
+                    
         
         return {'FINISHED'}
 
@@ -398,7 +410,6 @@ class OperatorPanel(bpy.types.Panel):
                 row = layout.row()
                 row.prop(myTool, "customDisplay")
                 row = layout.row()
-                
                 row.operator("bone.control_bones")
                 
                 row = layout.row()
