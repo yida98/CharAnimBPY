@@ -390,12 +390,15 @@ class StraightenNormal(bpy.types.Operator):
         
         head = myTool.straightenHead
         
-        for bone in obj.selected_bones:
-            origin = bone.head
+        for bone in context.selected_bones:
             if head:
                 origin = bone.tail
-            
-            newVector = origin + normal        
+                newVector = origin + normal 
+                bone.head = newVector
+            else:
+                origin = bone.head
+                newVector = origin + normal
+                bone.tail = newVector
             
             bone.roll = 0
         
@@ -491,10 +494,9 @@ class OperatorPanel(bpy.types.Panel):
                 col2.operator("bone.add_bend")
                 
                 row = layout.row()
-                row.label(text = "", icon = "NORMALS_FACE")
+                row.label(text = "Straighten Bones", icon = "NORMALS_FACE")
                 row = layout.row()
                 row.prop(myTool, "straightenHead")
-                row = layout.row()
                 row.prop(myTool, "straightenAxis")
                 row = layout.row()
                 row.operator("bone.straighten")
