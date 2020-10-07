@@ -46,6 +46,24 @@ class BoneSettings(bpy.types.PropertyGroup):
         name = "Display"
         )
         
+    straightenHead: bpy.props.BoolProperty(
+        name = "Move head",
+        description = "Straighten head or tail",
+        default = False
+    )
+    
+    straightenAxis: bpy.props.EnumProperty(
+        items = [("X", "+X", "Positive X axis", 1),
+        ("Y", "+Y", "Positive Y axis", 2),
+        ("Z", "+Z", "Positive Z axis", 3),
+        ("nX", "-X", "Negative X axis", 4),
+        ("nY", "-Y", "Negative Y axis", 5),
+        ("nZ", "-Z", "Negative Z axis", 6)
+        ],
+        name = "Axis",
+        default = 1
+    )
+        
 class GeneralSettings(bpy.types.PropertyGroup):
     newName: bpy.props.StringProperty(
         name = "Name",
@@ -342,6 +360,47 @@ class ControlBones(bpy.types.Operator):
                     
         
         return {'FINISHED'}
+    
+class StraightenNormal(bpy.types.Operator):
+    bl_idname = "bone.straighten"
+    bl_label = "Straighten"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'EDIT' and len(context.selected_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        map = {"X": Vector((0.1, 0, 0)),
+               "Y": Vector((0, 0.1, 0)), 
+               "Z": Vector((0, 0, 0.1)),
+               "nX": Vector((-0.1, 0, 0)),
+               "nY": Vector((0, -0.1, 0)),
+               "nZ": Vector((0, 0, -0.1))
+               }
+               
+        obj = context.object
+        armature = bpy.data.armatures[obj.name]
+        myTool = context.scene.bone_tool
+        
+        normal = map[myTool.straightenAxis]
+        
+        head = myTool.straightenHead
+        
+        for bone in obj.selected_bones:
+            origin = bone.head
+            if head:
+                origin = bone.tail
+            
+            newVector = origin + normal        
+            
+            bone.roll = 0
+        
+        return {'FINISHED'}
+    
 
 # ------------------------
 # PANELS
@@ -430,14 +489,22 @@ class OperatorPanel(bpy.types.Panel):
                 col2 = split.column()
                 col1.prop(myTool, "bboneSeg1")
                 col2.operator("bone.add_bend")
-            
+                
+                row = layout.row()
+                row.label(text = "", icon = "NORMALS_FACE")
+                row = layout.row()
+                row.prop(myTool, "straightenHead")
+                row = layout.row()
+                row.prop(myTool, "straightenAxis")
+                row = layout.row()
+                row.operator("bone.straighten")
         
         
 # ------------------------
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, ControlBones, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, ControlBones, StraightenNormal, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
