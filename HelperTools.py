@@ -317,6 +317,8 @@ class ControlBones(bpy.types.Operator):
             tail = bone.tail
             bone.parent = None
             self.report({'INFO'}, "head: %s, tail: %s, normal: %s" % (head, tail, normal))
+#            bone.bbone_easein = 0
+#            bone.bbone_easeout = 0
             
 #            bone.bbone_handle_type_start = 'ABSOLUTE'
 #            bone.bbone_handle_type_end = 'ABSOLUTE'
@@ -339,7 +341,7 @@ class ControlBones(bpy.types.Operator):
                 if i == 0:
                     bone = armature.edit_bones[boneName]
                     bone.parent = currBone
-                    bone.use_connect = True
+                    bone.use_connect = False
 
 #                    bone.bbone_custom_handle_start = currBone
                 else:
@@ -374,13 +376,6 @@ class StraightenNormal(bpy.types.Operator):
         return False
     
     def execute(self, context):
-        map = {"X": Vector((0.1, 0, 0)),
-               "Y": Vector((0, 0.1, 0)), 
-               "Z": Vector((0, 0, 0.1)),
-               "nX": Vector((-0.1, 0, 0)),
-               "nY": Vector((0, -0.1, 0)),
-               "nZ": Vector((0, 0, -0.1))
-               }
                
         obj = context.object
         armature = bpy.data.armatures[obj.name]
@@ -391,6 +386,14 @@ class StraightenNormal(bpy.types.Operator):
         head = myTool.straightenHead
         
         for bone in context.selected_bones:
+            len = bone.length
+            map = {"X": Vector((len, 0, 0)),
+               "Y": Vector((0, len, 0)), 
+               "Z": Vector((0, 0, len)),
+               "nX": Vector((-len, 0, 0)),
+               "nY": Vector((0, -len, 0)),
+               "nZ": Vector((0, 0, -len))
+               }
             if head:
                 origin = bone.tail
                 newVector = origin + normal 
