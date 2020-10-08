@@ -63,6 +63,11 @@ class BoneSettings(bpy.types.PropertyGroup):
         name = "Axis",
         default = 1
     )
+    
+    customDisplay1: bpy.props.PointerProperty(
+        type = bpy.types.Object,
+        name = "Display"
+        )
         
 class GeneralSettings(bpy.types.PropertyGroup):
     newName: bpy.props.StringProperty(
@@ -381,8 +386,6 @@ class StraightenNormal(bpy.types.Operator):
         armature = bpy.data.armatures[obj.name]
         myTool = context.scene.bone_tool
         
-        normal = map[myTool.straightenAxis]
-        
         head = myTool.straightenHead
         
         for bone in context.selected_bones:
@@ -394,6 +397,8 @@ class StraightenNormal(bpy.types.Operator):
                "nY": Vector((0, -len, 0)),
                "nZ": Vector((0, 0, -len))
                }
+        
+            normal = map[myTool.straightenAxis]
             if head:
                 origin = bone.tail
                 newVector = origin + normal 
@@ -404,6 +409,29 @@ class StraightenNormal(bpy.types.Operator):
                 bone.tail = newVector
             
             bone.roll = 0
+        
+        return {'FINISHED'}
+    
+class ChangeDisplay(bpy.types.Operator):
+    bl_idname = "bone.change_display"
+    bl_label = "Change"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        if obj.type == 'ARMATURE' and obj.mode == 'POSE' and len(context.selected_pose_bones) > 0:
+            return True
+        return False
+    
+    def execute(self, context):
+        
+        myTool = context.scene.bone_tool
+        
+        newImage = myTool.customDisplay1
+        
+        for bone in context.selected_pose_bones:
+            bone.custom_shape = newImage
         
         return {'FINISHED'}
     
@@ -468,6 +496,13 @@ class OperatorPanel(bpy.types.Panel):
                 row.operator("bone.delete_constraints")
                 row.operator("bone.copy_constraints")
                 
+                row = layout.row()
+                row.label(text = "Batch change display", icon = 'MODIFIER_DATA')
+                row = layout.row()
+                row.prop(myTool, "customDisplay1")
+                row = layout.row()
+                row.operator("bone.change_display")            
+                
             elif activeObj.mode == 'EDIT':
                 
                 row = layout.row()
@@ -509,7 +544,7 @@ class OperatorPanel(bpy.types.Panel):
 # REGISTER
 # ------------------------
             
-classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, ControlBones, StraightenNormal, GeneralPanel, OperatorPanel)
+classes = (BoneSettings, GeneralSettings, AddBones, RenameItems, CopyConstraints, DeleteConstraints, DeformOn, DeformOff, BatchSeg, ControlBones, StraightenNormal, ChangeDisplay, GeneralPanel, OperatorPanel)
 
 def register():
     for c in classes:
